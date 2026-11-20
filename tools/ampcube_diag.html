@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>AMPCUBE – diagnostica protocollo (sola lettura)</title>
+<style>
+  body { font-family: system-ui, sans-serif; background:#1e1e1e; color:#ddd; margin:20px; }
+  h1 { font-size:20px; } button { margin:4px; padding:8px 12px; background:#333; color:#fff; border:1px solid #666; border-radius:4px; cursor:pointer; }
+  button:hover { background:#444; } select,input { padding:6px; background:#222; color:#fff; border:1px solid #666; }
+  textarea { width:100%; height:420px; background:#111; color:#9f9; font-family:monospace; font-size:12px; }
+  .box { border:1px solid #444; padding:10px; margin:10px 0; border-radius:6px; }
+  .warn { color:#fc6; }
+</style>
+</head>
+<body>
+<h1>AMPCUBE – diagnostica protocollo SysEx (solo richieste di LETTURA)</h1>
+<p class="warn">Chiudi l'app Android, Sonicake Manager e SonicMaster prima di usare questa pagina. Usa Chrome o Edge.
+Questa pagina non scrive nulla sul dispositivo: invia solo richieste di lettura documentate (12 10, 12 40, 12 43, 12 41, 12 4F).</p>
+
+<div class="box">
+  <button id="connect">1. Connetti MIDI</button>
+  In: <select id="inSel"></select> Out: <select id="outSel"></select>
+</div>
+
+<div class="box">
+  <b>2. Letture</b><br>
+  <button data-req="1210">Info globali (12 10)</button>
+  <button data-req="1240">Nomi preset (12 40)</button>
+  <button data-req="1243">Preset attivo (12 43)</button>
+  <button data-req="1241">Stato preset attivo (12 41)</button>
+  <br>
+  Preset memorizzato n. (0 = P01): <input id="pidx" type="number" value="0" min="0" max="199" style="width:70px">
+  <button id="read4f">Leggi preset (12 4F)</button>
+  <br>
+  <button id="all">Esegui tutto in sequenza</button>
+  <button id="mark">Inserisci segnaposto</button>
+  <button id="copy">Copia log</button>
+  <button id="clear">Pulisci</button>
+</div>
+
+<textarea id="log" readonly></textarea>
+
+<script>
+const logEl = document.getElementById('log');
+const hex = a => Array.from(a, b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+function log(s) { logEl.value += s + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+
+function crc8(bytes) {
+  let c = 0;
+  for (const x of bytes) { c ^= x; for (let i = 0; i < 8; i++) c = (c & 0x80) ? ((c << 1) ^ 7) & 0xff : (c << 1) & 0xff; }
+  return c;
+}
+function frame(cmd, sub, payload) {
+  const body = [0, cmd, sub, payload.length, ...payload];
+  body[0] = crc8(body);
+  const out = [0xF0];
+  for (const b of body) out.push(b >> 4, b & 15);
+  out.push(0xF7);
+  return out;
+}
+function decodeFrame(raw) {
+  if (raw[0] !== 0xF0 || raw[raw.length - 1] !== 0xF7) return null;
+  const nib = raw.slice(1, -1);
+  if (nib.length % 2 || nib.some(x => x > 15)) return null;
+  const body = [];
+  for (let i = 0; i < nib.length; i += 2) body.push((nib[i] << 4) | nib[i + 1]);
+  if (body.length < 4) return null;
+  const chk = body.slice(); chk[0] = 0;
+  return { crcOk: crc8(chk) === body[0], cmd: body[1], sub: body[2], len: body[3], payload: body.slice(4, 4 + body[3]) };
+}
+
+let midi, input, output;
+let multi = null; // {count, parts}
+
+function onMessage(e) {
+  const d = Array.from(e.data);
+  const f = decodeFrame(d);
+  if (!f) { log('RX raw  ' + hex(d)); return; }
+  log(`RX cmd=${hex([f.cmd])} idx=${hex([f.sub])} len=${f.len} crc=${f.crcOk ? 'ok' : 'ERR'}  ${hex(f.payload)}`);
+  if (f.cmd > 1 || (multi && f.cmd === multi.count)) {
+    if (!multi || multi.count !== f.cmd || f.sub === 0) multi = { count: f.cmd, parts: [] };
+    multi.parts[f.sub] = f.payload;
+    const got = multi.parts.filter(Boolean).length;
+    if (got === multi.count) {
+      const all = [].concat(...multi.parts);
+      log(`== MESSAGGIO COMPLETO (${multi.count} frammenti, ${all.length} byte): ${hex(all)}`);
+      multi = null;
+    }
+  } else if (f.cmd === 1) {
+    log(`== MESSAGGIO (${f.payload.length} byte): ${hex(f.payload)}`);
+  }
+}
+
+function fillSelect(sel, ports) {
+  sel.innerHTML = '';
+  for (const p of ports.values()) {
+    const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.appendChild(o);
+    if (/ampcube/i.test(p.name)) o.selected = true;
+  }
+}
+function bind() {
+  if (input) input.onmidimessage = null;
+  input = midi.inputs.get(document.getElementById('inSel').value);
+  output = midi.outputs.get(document.getElementById('outSel').value);
+  if (input) input.onmidimessage = onMessage;
+  log(`Porte: IN=${input && input.name}  OUT=${output && output.name}`);
+}
+document.getElementById('connect').onclick = async () => {
+  try {
+    midi = await navigator.requestMIDIAccess({ sysex: true });
+    fillSelect(document.getElementById('inSel'), midi.inputs);
+    fillSelect(document.getElementById('outSel'), midi.outputs);
+    bind();
+  } catch (err) { log('Errore Web MIDI: ' + err); }
+};
+document.getElementById('inSel').onchange = bind;
+document.getElementById('outSel').onchange = bind;
+
+function send(payload, label) {
+  if (!output) { log('Prima connetti il MIDI'); return; }
+  const f = frame(1, 0, payload);
+  log(`\n--- ${label}\nTX ${hex(f)}`);
+  output.send(f);
+}
+const reqs = { '1210': [0x12, 0x10], '1240': [0x12, 0x40], '1243': [0x12, 0x43], '1241': [0x12, 0x41] };
+document.querySelectorAll('button[data-req]').forEach(b => b.onclick = () => send(reqs[b.dataset.req], b.textContent));
+function read4f() {
+  const n = Math.max(0, parseInt(document.getElementById('pidx').value || '0', 10));
+  send([0x12, 0x4F, n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >> 24) & 255], `Leggi preset ${n} (12 4F)`);
+}
+document.getElementById('read4f').onclick = read4f;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+document.getElementById('all').onclick = async () => {
+  for (const k of ['1210', '1243', '1241', '1240']) { send(reqs[k], k); await sleep(2500); }
+  read4f();
+};
+document.getElementById('mark').onclick = () => { const s = prompt('Segnaposto (es. "cambiato preset su P02")'); if (s) log('\n##### ' + s + '\n'); };
+document.getElementById('copy').onclick = () => { logEl.select(); navigator.clipboard.writeText(logEl.value); };
+document.getElementById('clear').onclick = () => { logEl.value = ''; };
+</script>
+</body>
+</html>
