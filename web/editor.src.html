@@ -4,74 +4,156 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AMPCUBE Editor</title>
+<!--
+  AMPCUBE Editor — editor non ufficiale per Sonicake AMPCUBE (non affiliato con Sonicake).
+  Protocollo e icone: SonicMaster (c) 2026 Andrii Klaptsov, licenza MIT.
+  Font Oswald: SIL Open Font License 1.1.
+-->
 <style>
-  :root { --bg:#1b1b1d; --panel:#26262a; --panel2:#2f2f34; --acc:#f08a24; --txt:#e8e8e8; --dim:#9a9aa2; --on:#4cc36a; }
+  @font-face { font-family: 'Oswald'; src: url(data:font/ttf;base64,/*FONT*/) format('truetype'); font-weight: 200 700; }
+  :root {
+    --bg:#7A60B9; --bg2:#8F72C4; --panel:#7d66bd; --panelB:#9a85d4; --dark:#121014; --dark2:#1d1a22;
+    --lime:#b5f03c; --lime2:#7fbf1a; --txt:#f4f1ff; --dim:#d9d0f4; --badge:#0b0b0b; --badgeTxt:#43f5a0;
+  }
   * { box-sizing:border-box; }
-  body { margin:0; font-family:system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--txt); }
-  header { display:flex; align-items:center; gap:12px; padding:10px 16px; background:#111; border-bottom:1px solid #333; flex-wrap:wrap; }
-  header h1 { font-size:18px; margin:0 12px 0 0; letter-spacing:1px; }
-  header .pn { background:var(--acc); color:#111; border-radius:4px; padding:2px 6px; font-weight:700; }
-  button { background:var(--panel2); color:var(--txt); border:1px solid #444; border-radius:5px; padding:7px 12px; cursor:pointer; font-size:13px; }
-  button:hover { border-color:var(--acc); } button.primary { background:var(--acc); color:#111; border-color:var(--acc); font-weight:600; }
-  button:disabled { opacity:.4; cursor:default; }
-  #status { color:var(--dim); font-size:13px; margin-left:auto; }
-  main { display:flex; height:calc(100vh - 54px); }
-  aside { width:250px; min-width:200px; background:var(--panel); border-right:1px solid #333; display:flex; flex-direction:column; }
-  .tabs { display:flex; } .tabs button { flex:1; border-radius:0; border:none; padding:10px; }
-  .tabs button.active { background:var(--panel2); color:var(--acc); font-weight:700; }
-  #plist { overflow:auto; flex:1; }
-  .pitem { padding:7px 10px; border-bottom:1px solid #303034; cursor:pointer; font-size:14px; display:flex; gap:8px; align-items:center; }
-  .pitem:hover { background:#333; } .pitem.sel { background:#4a3420; border-left:3px solid var(--acc); }
-  .pitem .no { font-size:11px; background:#444; border-radius:3px; padding:1px 5px; min-width:34px; text-align:center; }
-  #content { flex:1; overflow:auto; padding:14px; }
-  .toprow { display:flex; gap:16px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:12px; }
-  .mod { background:var(--panel); border:1px solid #38383d; border-radius:8px; padding:10px; }
-  .mod.off { opacity:.55; }
-  .mhead { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-  .mhead .key { font-weight:800; letter-spacing:1px; width:52px; }
-  .mhead select { flex:1; background:#1e1e21; color:var(--txt); border:1px solid #444; border-radius:4px; padding:4px; }
-  .tog { width:42px; height:22px; border-radius:11px; background:#555; position:relative; cursor:pointer; border:none; padding:0; }
-  .tog::after { content:''; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#ddd; transition:left .15s; }
-  .tog.on { background:var(--on); } .tog.on::after { left:23px; }
-  .prm { display:grid; grid-template-columns:78px 1fr 46px; gap:6px; align-items:center; font-size:12px; margin:3px 0; }
-  .prm input[type=range] { width:100%; accent-color:var(--acc); }
-  .prm .v { text-align:right; color:var(--acc); font-variant-numeric:tabular-nums; }
-  .note { color:var(--dim); font-size:12px; }
-  #log { position:fixed; bottom:0; left:0; right:0; max-height:28vh; overflow:auto; background:#0d0d0e; color:#8f8; font:11px monospace; padding:6px; display:none; border-top:1px solid #333; white-space:pre-wrap; }
-  .warnbox { background:#3a2a10; border:1px solid #7a5a20; padding:8px 10px; border-radius:6px; font-size:13px; margin-bottom:12px; }
+  html,body { margin:0; height:100%; }
+  body { font-family:'Oswald',system-ui,sans-serif; background:var(--bg); color:var(--txt); overflow:hidden; letter-spacing:.3px; }
+  button { font-family:inherit; }
+
+  /* ---------- top bar */
+  header { height:60px; display:flex; align-items:center; gap:12px; padding:0 16px; background:linear-gradient(var(--bg2),#8269bf); border-bottom:1px solid #6a52a8; }
+  .logo { font-size:27px; font-weight:700; letter-spacing:1px; background:linear-gradient(#ffb03a,#f07a1a); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none; }
+  .logo small { font-size:16px; margin-left:6px; }
+  .chip { border:2px solid #f4f1ff; border-radius:7px; padding:1px 9px; font-size:15px; font-weight:600; }
+  .chip.dark { background:#0b0b0b; border-color:#0b0b0b; color:#fff; }
+  .chip.dark b { color:var(--lime); }
+  .iconbtn { background:none; border:none; color:#fff; font-size:20px; cursor:pointer; padding:4px 6px; opacity:.9; }
+  .iconbtn:hover { opacity:1; transform:scale(1.08); } .iconbtn:disabled { opacity:.35; cursor:default; transform:none; }
+  .spacer { flex:1; }
+  .conn { display:flex; align-items:center; gap:10px; background:#0b0b0b; border-radius:24px; padding:5px 6px 5px 16px; font-size:15px; }
+  .conn .led { width:9px; height:9px; border-radius:50%; background:#ff4444; box-shadow:0 0 6px #ff4444; }
+  .conn .led.on { background:#44ff66; box-shadow:0 0 8px #44ff66; }
+  .pillbtn { background:linear-gradient(#4b3d70,#352b52); color:#fff; border:2px solid #241c38; border-radius:20px; padding:4px 14px; font-weight:600; cursor:pointer; font-size:13px; letter-spacing:.8px; box-shadow:inset 0 1px 0 rgba(255,255,255,.15); }
+  .pillbtn:hover { border-color:var(--lime); }
+  .pillbtn.lime { background:linear-gradient(#c9ff5a,#9bd52c); color:#132; border-color:#5c8f0e; }
+
+  /* ---------- layout */
+  .wrap { display:flex; height:calc(100% - 60px); }
+  aside { width:244px; min-width:244px; border-right:1px solid #6a52a8; display:flex; flex-direction:column; padding:12px 8px 8px; gap:10px; }
+  .mastervol { display:flex; flex-direction:column; align-items:center; padding-bottom:10px; border-bottom:1px solid #6a52a8; }
+  .seg { display:flex; background:#3a2f5a; border-radius:22px; padding:3px; box-shadow:inset 0 2px 4px rgba(0,0,0,.4); }
+  .seg button { flex:1; border:none; background:none; color:#e6dcff; font-weight:700; font-size:16px; letter-spacing:1.5px; padding:6px; border-radius:18px; cursor:pointer; }
+  .seg button.active { background:linear-gradient(#c9ff5a,#9bd52c); color:#142; }
+  .search { display:flex; align-items:center; gap:6px; background:#6a55a8; border-radius:8px; padding:6px 10px; box-shadow:inset 0 2px 4px rgba(0,0,0,.25); }
+  .search input { background:none; border:none; outline:none; color:#fff; font-family:inherit; font-size:15px; width:100%; }
+  .search input::placeholder { color:#cbbff0; }
+  #plist { flex:1; overflow:auto; background:var(--dark); border-radius:10px; padding:6px; border:2px solid #2a2238; }
+  #plist::-webkit-scrollbar { width:6px; } #plist::-webkit-scrollbar-thumb { background:#555; border-radius:3px; }
+  .pitem { display:flex; align-items:center; gap:10px; padding:7px 8px; margin:3px 0; border-radius:6px; cursor:pointer; background:var(--dark2); font-size:15px; font-weight:500; }
+  .pitem:hover { background:#29242f; }
+  .pitem .no { font-size:12px; font-weight:700; border:2px solid var(--lime2); color:var(--lime); border-radius:4px; padding:0 5px; min-width:38px; text-align:center; }
+  .pitem.sel { background:linear-gradient(#1f3a2a,#16301f); border:2px solid #34c77a; }
+  .pitem.sel .no { background:#2ad07a; color:#082; border-color:#2ad07a; }
+  .credits { text-align:center; font-size:11px; color:#e6dcff; opacity:.85; line-height:1.4; }
+
+  main { flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:16px; }
+  .chainbox { background:linear-gradient(#141217,#0c0b0e); border-radius:16px; padding:14px 18px 18px; border:3px solid #26222c; box-shadow:0 6px 18px rgba(0,0,0,.35); }
+  .chainhead { display:flex; align-items:center; gap:10px; margin-bottom:14px; font-size:21px; font-weight:600; }
+  .pbadge { background:#2ad07a; color:#062; font-size:14px; font-weight:700; border-radius:4px; padding:1px 7px; }
+  .chain { display:flex; align-items:center; gap:4px; overflow-x:auto; padding-bottom:4px; }
+  .arrow { color:#bbb; font-size:20px; padding:0 2px; }
+  .tile { width:96px; min-width:96px; height:136px; border:2px solid #d9d9d9; border-radius:8px; background:#000; display:flex; flex-direction:column; align-items:center; padding:8px 4px 6px; cursor:pointer; position:relative; transition:transform .1s; }
+  .tile:hover { transform:translateY(-2px); }
+  .tile .grip { width:40px; height:6px; background:repeating-linear-gradient(90deg,#666 0 2px,transparent 2px 4px); opacity:.7; margin-bottom:6px; }
+  .tile .ic { height:44px; display:flex; align-items:center; justify-content:center; }
+  .tile .ic svg { height:44px; width:auto; }
+  .tile .k { font-weight:700; font-size:15px; margin-top:6px; }
+  .tile .e { font-size:11px; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:88px; }
+  .tile .bar { margin-top:auto; width:66px; height:13px; border-radius:7px; border:2px solid currentColor; }
+  .tile.on .bar { background:currentColor; }
+  .tile.sel { box-shadow:0 0 0 3px currentColor, 0 0 16px currentColor; }
+  .tile.off .ic, .tile.off .k, .tile.off .e { opacity:.45; }
+
+  .lower { display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; }
+  .panel { background:linear-gradient(#836bc4,#7660b4); border:2px solid #9a86d6; border-radius:14px; padding:16px 20px; box-shadow:0 4px 12px rgba(40,20,80,.25); }
+  .pvolpanel { width:260px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .editor { flex:1; min-width:520px; display:flex; flex-direction:column; gap:14px; }
+  .edhead { display:flex; align-items:center; gap:18px; }
+  .edhead .title { font-size:22px; letter-spacing:2px; font-weight:500; min-width:70px; }
+  .fxsel { position:relative; }
+  .fxsel select { appearance:none; -webkit-appearance:none; font-family:inherit; font-size:18px; font-weight:600; letter-spacing:1px; color:#fff;
+    background:linear-gradient(#8f78d0,#6c58b0); border:2px solid #b8a6ee; border-radius:22px; padding:5px 40px 5px 18px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.25); min-width:180px; }
+  .fxsel::after { content:'⌄'; position:absolute; right:16px; top:2px; color:var(--lime); font-size:20px; pointer-events:none; }
+  .fxsel select option { background:#3b2f60; }
+  .switches { margin-left:auto; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  .swrow { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600; letter-spacing:1px; }
+  .sw { width:50px; height:26px; border-radius:14px; background:#3b305a; border:2px solid #2a2240; position:relative; cursor:pointer; box-shadow:inset 0 2px 4px rgba(0,0,0,.4); padding:0; }
+  .sw::after { content:''; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#d8d0ee; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.5); }
+  .sw.on { background:linear-gradient(#c9ff5a,#8fd12a); border-color:#5c8f0e; } .sw.on::after { left:26px; background:#f4fff0; }
+  .knobs { display:flex; flex-wrap:wrap; gap:14px 22px; align-items:flex-end; justify-content:flex-start; padding:4px 0; min-height:150px; }
+  .knob { display:flex; flex-direction:column; align-items:center; width:118px; user-select:none; }
+  .knob .badge { background:var(--badge); color:var(--badgeTxt); font-weight:700; font-size:20px; border-radius:6px; padding:0 8px; min-width:44px; text-align:center; margin-bottom:-6px; z-index:1; position:relative; }
+  .knob svg { width:118px; height:118px; cursor:ns-resize; touch-action:none; }
+  .knob .lbl { font-size:15px; letter-spacing:1.2px; text-transform:uppercase; margin-top:2px; text-align:center; }
+  .togcell { display:flex; flex-direction:column; align-items:center; gap:10px; width:100px; padding-bottom:22px; }
+  .togcell .lbl { font-size:14px; letter-spacing:1.2px; text-transform:uppercase; }
+  .descbar { background:#0b0b0b; border-radius:10px; padding:10px 16px; font-size:14px; color:#eee; }
+  .empty { opacity:.8; font-size:16px; padding:30px; }
+
+  #log { position:fixed; bottom:0; left:0; right:0; height:26vh; overflow:auto; background:#0b0b0e; color:#8f8; font:11px ui-monospace,monospace; padding:6px; display:none; border-top:2px solid #333; white-space:pre-wrap; z-index:5; }
+  .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#0b0b0b; color:#fff; padding:8px 16px; border-radius:8px; font-size:14px; opacity:0; transition:opacity .2s; z-index:6; }
+  .toast.show { opacity:1; }
 </style>
 </head>
 <body>
 <header>
-  <h1>AMPCUBE EDITOR</h1>
-  <span id="curp"></span>
-  <button id="btnConnect" class="primary">Connetti</button>
-  <button id="btnReload" disabled>Ricarica</button>
-  <button id="btnSave" disabled>Salva preset…</button>
-  <button id="btnLog">Log</button>
-  <span id="status">Non connesso. Usa Chrome o Edge, cavo USB, chiudi l'app Android e Sonicake Manager.</span>
+  <div class="logo">AMPCUBE<small>EDITOR</small></div>
+  <span class="chip" id="fwchip">V1.2.3</span>
+  <span class="chip dark" id="bpmchip">♩ <b>—</b> BPM</span>
+  <span class="spacer"></span>
+  <button class="iconbtn" id="btnReload" title="Rileggi dal dispositivo" disabled>⟳</button>
+  <button class="iconbtn" id="btnSave" title="Salva preset" disabled>💾</button>
+  <button class="iconbtn" id="btnLog" title="Log MIDI">⌨</button>
+  <div class="conn"><span id="connName">AMPCUBE</span><span class="led" id="led"></span><button class="pillbtn" id="btnConnect">Connect</button></div>
 </header>
-<main>
+<div class="wrap">
   <aside>
-    <div class="tabs"><button id="tabUser" class="active">USER</button><button id="tabFactory">FACTORY</button></div>
+    <div class="mastervol" id="mastervol"></div>
+    <div class="seg"><button id="tabFactory">FACTORY</button><button id="tabUser" class="active">USER</button></div>
+    <div class="search">🔍<input id="search" placeholder="Search presets"></div>
     <div id="plist"></div>
+    <div class="credits">AMPCUBE Editor<br>Protocol &amp; icons: SonicMaster by Skyggedans (MIT)<br>Non affiliato con Sonicake</div>
   </aside>
-  <section id="content">
-    <div class="warnbox">Editor non ufficiale per Sonicake AMPCUBE (firmware V1.2.3), basato sul protocollo SysEx documentato da
-      SonicMaster e dal Pocket Master Interoperability Guide. Le modifiche ai parametri sono <b>live</b> e non vengono memorizzate finché
-      non premi <b>Salva preset</b>. Uso a tuo rischio.</div>
-    <div class="toprow">
-      <label>Volume preset <input id="pvol" type="range" min="0" max="100" step="1" disabled> <span id="pvolv" class="note"></span></label>
-      <span id="bpm" class="note"></span>
+  <main>
+    <div class="chainbox">
+      <div class="chainhead"><span class="pbadge" id="curNo">P01</span><span id="curName">—</span></div>
+      <div class="chain" id="chain"></div>
     </div>
-    <div id="mods" class="grid"></div>
-  </section>
-</main>
+    <div class="lower">
+      <div class="panel pvolpanel" id="pvolpanel"></div>
+      <div class="panel editor" id="editor"><div class="empty">Collega l'AMPCUBE con il cavo USB e premi <b>Connect</b> (Chrome o Edge; chiudi l'app Android e Sonicake Manager).</div></div>
+    </div>
+  </main>
+</div>
 <div id="log"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 const CATALOG = /*CATALOG*/null;
+const ICONS = /*ICONS*/null;
+
+// Display blocks of the chain. CLONE (module 8) is a mode of the AMP block.
+const BLOCKS = [
+  { key: 'PRE', mod: 0, icon: 'fx1', color: '#ffffff' },
+  { key: 'DRV', mod: 1, icon: 'drv', color: '#ff3b3b' },
+  { key: 'AMP', mod: 2, icon: 'amp', color: '#ff7a1a' },
+  { key: 'CAB', mod: 3, icon: 'ir', color: '#ffc21a' },
+  { key: 'EQ', mod: 4, icon: 'eq', color: '#2ee66b' },
+  { key: 'MOD', mod: 5, icon: 'fx2', color: '#2ee66b' },
+  { key: 'DLY', mod: 6, icon: 'dly', color: '#27d3f0' },
+  { key: 'RVB', mod: 7, icon: 'rvb', color: '#a64dff' },
+];
+const AMP = 2, CLONE = 8, CAB = 3;
 
 // ---------------------------------------------------------------- protocol
 const hex = a => Array.from(a, b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
@@ -92,39 +174,27 @@ function decodeFrame(raw) {
 }
 const u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
 const f32 = v => Array.from(new Uint8Array(new Float32Array([v]).buffer));
+const dv = arr => new DataView(new Uint8Array(arr).buffer);
 
-let midi = null, inPort = null, outPort = null;
-let multi = null; const waiters = [];
-const sendQ = []; let sending = false;
-function send(payload) {
-  sendQ.push(payload);
-  if (!sending) pump();
-}
+let midi = null, inPort = null, outPort = null, multi = null;
+const waiters = [], sendQ = []; let sending = false;
+function send(payload) { sendQ.push(payload); if (!sending) pump(); }
 async function pump() {
   sending = true;
-  while (sendQ.length) {
-    const p = sendQ.shift();
-    if (!outPort) break;
-    const f = frame(p); log('TX ' + hex(p)); outPort.send(f);
-    await new Promise(r => setTimeout(r, 12));
-  }
+  while (sendQ.length) { const p = sendQ.shift(); if (!outPort) break; log('TX ' + hex(p)); outPort.send(frame(p)); await new Promise(r => setTimeout(r, 12)); }
   sending = false;
 }
 function onMidi(e) {
   const f = decodeFrame(Array.from(e.data));
-  if (!f) return;
-  if (!f.ok) { log('RX CRC ERR'); return; }
+  if (!f) return; if (!f.ok) { log('RX CRC ERR'); return; }
   if (f.cmd <= 1) return deliver(f.payload);
   if (!multi || multi.count !== f.cmd || f.sub === 0) multi = { count: f.cmd, parts: [] };
   multi.parts[f.sub] = f.payload;
   if (multi.parts.filter(Boolean).length === multi.count) { const all = [].concat(...multi.parts); multi = null; deliver(all); }
 }
 function deliver(m) {
-  log('RX ' + (m.length > 40 ? hex(m.slice(0, 40)) + ` … (${m.length} B)` : hex(m)));
-  for (let i = 0; i < waiters.length; i++) {
-    const w = waiters[i];
-    if (m[0] === w.a && m[1] === w.b) { waiters.splice(i, 1); clearTimeout(w.t); w.resolve(m); return; }
-  }
+  log('RX ' + (m.length > 48 ? hex(m.slice(0, 48)) + ` … (${m.length} B)` : hex(m)));
+  for (let i = 0; i < waiters.length; i++) { const w = waiters[i]; if (m[0] === w.a && m[1] === w.b) { waiters.splice(i, 1); clearTimeout(w.t); w.resolve(m); return; } }
   unsolicited(m);
 }
 function request(payload, a, b, ms = 4000) {
@@ -134,163 +204,267 @@ function request(payload, a, b, ms = 4000) {
   });
 }
 
-// ---------------------------------------------------------------- device ops
-const dv = arr => new DataView(new Uint8Array(arr).buffer);
+// ---------------------------------------------------------------- decoding
 function parseTLV(bytes) {
   const v = dv(bytes); let i = 0; const out = {};
   while (i + 4 <= bytes.length) {
     const sec = v.getUint16(i, true), sl = v.getUint16(i + 2, true); i += 4;
-    const body = bytes.slice(i, i + sl); i += sl;
-    const fields = {}; const bv = dv(body); let j = 0;
+    const body = bytes.slice(i, i + sl); i += sl; const fields = {}; const bv = dv(body); let j = 0;
     while (j + 4 <= body.length) { const fid = bv.getUint16(j, true), fl = bv.getUint16(j + 2, true); j += 4; fields[fid] = body.slice(j, j + fl); j += fl; }
     out[sec] = fields;
   }
   return out;
 }
 function parseState(msg) {
-  const t = parseTLV(msg.slice(2));
-  const g = t[2] || {}, lvl = t[1] || {};
-  const st = {};
-  st.nmods = t[0] && t[0][0x1001] ? dv(t[0][0x1001]).getUint32(0, true) : 0;
-  st.level = lvl[0x2001] ? dv(lvl[0x2001]).getUint32(0, true) : null;
-  st.bpm = lvl[0x2002] ? dv(lvl[0x2002]).getUint32(0, true) : null;
-  st.mask = g[0x3001] ? dv(g[0x3001]).getUint32(0, true) : 0;
+  const t = parseTLV(msg.slice(2)), g = t[2] || {}, lvl = t[1] || {}, st = { effects: [], params: [] };
+  const U = a => dv(a).getUint32(0, true);
+  st.nmods = t[0] && t[0][0x1001] ? U(t[0][0x1001]) : 0;
+  st.level = lvl[0x2001] ? U(lvl[0x2001]) : null;
+  st.bpm = lvl[0x2002] ? U(lvl[0x2002]) : null;
+  st.mask = g[0x3001] ? U(g[0x3001]) : 0;
   st.chain = g[0x3002] ? Array.from(g[0x3002]) : [];
-  st.effects = []; st.params = [];
   if (g[0x3003]) { const d = dv(g[0x3003]); for (let k = 0; k < g[0x3003].length / 4; k++) st.effects.push(d.getUint32(k * 4, true)); }
   if (g[0x3004]) { const d = dv(g[0x3004]); for (let k = 0; k < g[0x3004].length / 4; k++) st.params.push(d.getFloat32(k * 4, true)); }
   return st;
 }
-let names = [], current = 0, state = null, showFactory = false;
-async function loadNames() {
-  const m = await request([0x12, 0x40], 0x12, 0x40, 8000);
-  names = [];
-  for (let o = 2; o + 20 <= m.length; o += 20) {
-    const idx = dv(m.slice(o, o + 4)).getUint32(0, true);
-    const nm = String.fromCharCode(...m.slice(o + 4, o + 20).filter(c => c)).trim();
-    names[idx] = nm;
+// Global settings (12 10): [tag u16][len u16][value]
+function parseGlobals(msg) {
+  const out = {}; let i = 2; const v = dv(msg);
+  while (i + 4 <= msg.length) { const tag = v.getUint16(i, true), len = v.getUint16(i + 2, true); i += 4; out[tag] = msg.slice(i, i + len); i += len; }
+  return out;
+}
+// 5-slot user name dumps (12 24 clone, 12 20 IR): fixed 16-byte stride, 10-char ASCII names.
+function parseUserNames(msg) {
+  const body = msg.slice(2);
+  const valid = blk => { let pad = false, ch = false; for (const c of blk) { if (c === 0) pad = true; else if (pad || c < 32 || c > 126) return false; else ch = true; } return ch ? 2 : 1; };
+  let best = null;
+  for (let off = 0; off < 16; off++) {
+    let score = 0; const names = [];
+    for (let k = 0; k < 5; k++) { const blk = body.slice(off + k * 16, off + k * 16 + 10); if (blk.length < 10) { score = -1; break; } const s = valid(blk); if (!s) { score = -1; break; } score += s; names.push(s === 2 ? String.fromCharCode(...blk.filter(c => c)) : ''); }
+    if (score > (best ? best.score : 0)) best = { score, names };
   }
-  renderList();
+  return best ? best.names : null;
 }
-async function loadCurrent() {
-  const m = await request([0x12, 0x43], 0x12, 0x43);
-  current = m[2] | (m[3] << 8);
+
+// ---------------------------------------------------------------- state
+let names = [], current = 0, state = null, globals = {}, showFactory = false, selBlock = 2, cloneNames = null, irNames = null;
+const $ = id => document.getElementById(id);
+function toast(s) { const t = $('toast'); t.textContent = s; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); }
+const isOn = m => !!(state && (state.mask & (1 << m)));
+const cloneMode = () => isOn(CLONE);
+
+async function loadNames() {
+  const m = await request([0x12, 0x40], 0x12, 0x40, 8000); names = [];
+  for (let o = 2; o + 20 <= m.length; o += 20) names[dv(m.slice(o, o + 4)).getUint32(0, true)] = String.fromCharCode(...m.slice(o + 4, o + 20).filter(c => c)).trim();
+  renderList(); renderHead();
 }
-async function loadState() {
-  const m = await request([0x12, 0x41], 0x12, 0x41, 6000);
-  state = parseState(m);
-  renderState();
+async function loadCurrent() { const m = await request([0x12, 0x43], 0x12, 0x43); current = m[2] | (m[3] << 8); }
+async function loadState() { state = parseState(await request([0x12, 0x41], 0x12, 0x41, 6000)); renderAll(); }
+async function loadGlobals() { try { globals = parseGlobals(await request([0x12, 0x10], 0x12, 0x10)); } catch (e) { globals = {}; } renderMaster(); }
+async function loadUserNames() {
+  try { cloneNames = parseUserNames(await request([0x12, 0x24], 0x12, 0x24, 3000)); } catch (e) { cloneNames = null; }
+  try { irNames = parseUserNames(await request([0x12, 0x20], 0x12, 0x20, 3000)); } catch (e) { irNames = null; }
 }
 async function fullReload() {
   try {
-    setStatus('Lettura…');
-    await loadCurrent(); await loadNames(); await loadState();
-    setStatus('Connesso: ' + (inPort && inPort.name));
-  } catch (e) { setStatus('Errore: ' + e.message); }
+    await loadGlobals(); await loadCurrent(); await loadNames(); await loadUserNames(); await loadState();
+    toast('Sincronizzato con l\'AMPCUBE');
+  } catch (e) { toast('Errore: ' + e.message); }
 }
 let reloadTimer = null;
-function scheduleState(ms = 250) { clearTimeout(reloadTimer); reloadTimer = setTimeout(async () => { try { await loadCurrent(); renderList(); await loadState(); } catch (e) { setStatus('Errore: ' + e.message); } }, ms); }
+function scheduleState(ms = 300) { clearTimeout(reloadTimer); reloadTimer = setTimeout(async () => { try { await loadCurrent(); renderList(); renderHead(); await loadState(); } catch (e) { toast('Errore: ' + e.message); } }, ms); }
 function unsolicited(m) {
-  if (m[0] === 0x12 && m[1] === 0x43) { current = m[2] | (m[3] << 8); renderList(); scheduleState(); }
-  else if (m[0] === 0x12 && m[1] === 0x1B) { loadNames().catch(() => {}); }
+  if (m[0] === 0x12 && m[1] === 0x43) { current = m[2] | (m[3] << 8); renderList(); renderHead(); scheduleState(); }
+  else if (m[0] === 0x12 && m[1] === 0x1B) loadNames().catch(() => {});
 }
 
-// ---------------------------------------------------------------- UI
-const $ = id => document.getElementById(id);
-function setStatus(s) { $('status').textContent = s; }
-function pname(i) { return (i < 50 ? 'P' : 'F') + String((i % 50) + 1).padStart(2, '0'); }
-function renderList() {
-  const el = $('plist'); el.innerHTML = '';
-  const base = showFactory ? 50 : 0;
-  for (let i = base; i < base + 50; i++) {
-    const d = document.createElement('div'); d.className = 'pitem' + (i === current ? ' sel' : '');
-    d.innerHTML = `<span class="no">${pname(i)}</span><span></span>`; d.lastChild.textContent = names[i] || '';
-    d.onclick = () => { send([0x11, 0x43, ...u32(i)]); current = i; renderList(); scheduleState(350); };
-    el.appendChild(d);
+// ---------------------------------------------------------------- widgets
+function knob({ label, min, max, step, value, def, color = '#b5f03c', fmt, onChange, size = 118 }) {
+  const el = document.createElement('div'); el.className = 'knob';
+  const f = fmt || (v => step < 1 ? v.toFixed(1) : String(Math.round(v)));
+  el.innerHTML = `<div class="badge"></div>
+  <svg viewBox="0 0 120 120" style="width:${size}px;height:${size}px">
+    <defs><radialGradient id="kg" cx="40%" cy="35%" r="70%"><stop offset="0%" stop-color="#e6ff9a"/><stop offset="55%" stop-color="${color}"/><stop offset="100%" stop-color="#5e9a10"/></radialGradient></defs>
+    <path class="trk" fill="none" stroke="#3a2f5a" stroke-width="7" stroke-linecap="round"/>
+    <path class="val" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="60" cy="60" r="42" fill="#2a2240"/>
+    <g fill="#4b3d70">${Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4; return `<circle cx="${60 + 41 * Math.cos(a)}" cy="${60 + 41 * Math.sin(a)}" r="5"/>`; }).join('')}</g>
+    <circle cx="60" cy="60" r="34" fill="url(#kg)" stroke="#4a7a0a" stroke-width="1.5"/>
+    <circle cx="60" cy="60" r="27" fill="none" stroke="rgba(0,0,0,.15)" stroke-width="1"/>
+    <line class="ptr" x1="60" y1="60" x2="60" y2="34" stroke="#132" stroke-width="5" stroke-linecap="round"/>
+  </svg><div class="lbl"></div>`;
+  el.querySelector('.lbl').textContent = label;
+  const svg = el.querySelector('svg'), badge = el.querySelector('.badge');
+  const A0 = 135, A1 = 405, R = 52;
+  const pt = a => [60 + R * Math.cos(a * Math.PI / 180), 60 + R * Math.sin(a * Math.PI / 180)];
+  const arc = (a, b) => { const [x0, y0] = pt(a), [x1, y1] = pt(b); return `M${x0} ${y0} A${R} ${R} 0 ${b - a > 180 ? 1 : 0} 1 ${x1} ${y1}`; };
+  el.querySelector('.trk').setAttribute('d', arc(A0, A1));
+  let v = value;
+  const clamp = x => Math.min(max, Math.max(min, Math.round(x / step) * step));
+  function draw() {
+    const t = (v - min) / (max - min || 1), a = A0 + t * (A1 - A0);
+    el.querySelector('.val').setAttribute('d', t > 0.001 ? arc(A0, a) : '');
+    el.querySelector('.ptr').setAttribute('transform', `rotate(${a - 270} 60 60)`);
+    badge.textContent = f(v);
   }
-  $('curp').innerHTML = `<span class="pn">${pname(current)}</span> <b></b>`; $('curp').lastChild.textContent = names[current] || '';
-  $('btnSave').disabled = !outPort;
+  draw();
+  let drag = null;
+  svg.addEventListener('pointerdown', e => { svg.setPointerCapture(e.pointerId); drag = { y: e.clientY, v }; });
+  svg.addEventListener('pointermove', e => { if (!drag) return; const nv = clamp(drag.v + (drag.y - e.clientY) * (max - min) / 180); if (nv !== v) { v = nv; draw(); onChange(v, false); } });
+  svg.addEventListener('pointerup', () => { if (drag) { drag = null; onChange(v, true); } });
+  svg.addEventListener('wheel', e => { e.preventDefault(); const nv = clamp(v + (e.deltaY < 0 ? step : -step) * (e.shiftKey ? 10 : 1)); if (nv !== v) { v = nv; draw(); onChange(v, true); } }, { passive: false });
+  svg.addEventListener('dblclick', () => { if (def === undefined) return; v = clamp(def); draw(); onChange(v, true); });
+  return el;
 }
-function fmt(v, step) { return step < 1 ? v.toFixed(1) : Math.round(v).toString(); }
+function sw(on, onToggle) {
+  const b = document.createElement('button'); b.className = 'sw' + (on ? ' on' : '');
+  b.onclick = () => { const n = !b.classList.contains('on'); b.classList.toggle('on', n); onToggle(n); };
+  return b;
+}
 const throttles = {};
 function throttle(key, fn, ms = 40) {
-  const t = throttles[key] || (throttles[key] = { last: 0, timer: null, fn: null });
+  const t = throttles[key] || (throttles[key] = { last: 0, timer: null });
   t.fn = fn; const now = Date.now();
-  if (now - t.last >= ms) { t.last = now; fn(); }
-  else { clearTimeout(t.timer); t.timer = setTimeout(() => { t.last = Date.now(); t.fn(); }, ms - (now - t.last)); }
+  if (now - t.last >= ms) { t.last = now; fn(); } else { clearTimeout(t.timer); t.timer = setTimeout(() => { t.last = Date.now(); t.fn(); }, ms - (now - t.last)); }
 }
-function renderState() {
-  const box = $('mods'); box.innerHTML = '';
-  if (!state) return;
-  $('pvol').disabled = false; $('pvol').value = state.level ?? 0; $('pvolv').textContent = state.level;
-  $('bpm').textContent = state.bpm ? `BPM ${state.bpm}` : '';
-  if (state.nmods !== 9) { box.innerHTML = `<p class="note">Formato inatteso: ${state.nmods} moduli (atteso 9).</p>`; return; }
-  for (let m = 0; m < 9; m++) {
-    const cat = CATALOG[m], eid = state.effects[m];
-    const on = !!(state.mask & (1 << m));
-    const card = document.createElement('div'); card.className = 'mod' + (on ? '' : ' off');
-    const head = document.createElement('div'); head.className = 'mhead';
-    const key = document.createElement('span'); key.className = 'key'; key.textContent = cat.key;
-    const tog = document.createElement('button'); tog.className = 'tog' + (on ? ' on' : ''); tog.title = 'On/Off';
-    tog.onclick = () => {
-      const nowOn = !(state.mask & (1 << m));
-      state.mask = nowOn ? (state.mask | (1 << m)) : (state.mask & ~(1 << m));
-      send([0x11, 0x49, ...u32(m), ...u32(nowOn ? 1 : 0)]);
-      tog.classList.toggle('on', nowOn); card.classList.toggle('off', !nowOn);
-    };
-    const sel = document.createElement('select');
-    let eff = cat.effects.find(e => e.id === eid);
-    if (!eff) { const o = document.createElement('option'); o.value = eid; o.textContent = `? 0x${eid.toString(16)}`; sel.appendChild(o); }
-    for (const e of cat.effects) { const o = document.createElement('option'); o.value = e.id; o.textContent = e.name; if (e.id === eid) o.selected = true; sel.appendChild(o); }
-    sel.onchange = () => {
-      const id = Number(sel.value);
-      send([0x11, 0x47, ...u32(m), ...u32(m), ...u32(id)]);
-      scheduleState(400);
-    };
-    head.append(key, sel, tog); card.appendChild(head);
-    if (eff) for (const p of eff.params) {
-      const row = document.createElement('div'); row.className = 'prm';
-      const lab = document.createElement('span'); lab.textContent = p.n;
-      const r = document.createElement('input'); r.type = 'range'; r.min = p.min; r.max = p.max; r.step = p.step;
-      const cur = state.params[m * 8 + p.i]; r.value = cur;
-      const val = document.createElement('span'); val.className = 'v'; val.textContent = fmt(cur, p.step);
-      const push = () => { const v = Number(r.value); state.params[m * 8 + p.i] = v; send([0x11, 0x48, ...u32(m), ...u32(p.i), ...f32(v)]); };
-      r.oninput = () => { val.textContent = fmt(Number(r.value), p.step); throttle(`${m}_${p.i}`, push); };
-      r.onchange = push;
-      row.append(lab, r, val); card.appendChild(row);
-    }
-    box.appendChild(card);
+
+// ---------------------------------------------------------------- rendering
+const pname = i => (i < 50 ? 'P' : 'F') + String((i % 50) + 1).padStart(2, '0');
+function effectList(m) {
+  const list = CATALOG[m].effects.map(e => ({ ...e }));
+  if (m === CLONE && cloneNames) list.forEach((e, i) => { if (cloneNames[i]) e.name = cloneNames[i]; });
+  if (m === CAB && irNames) list.forEach(e => { if (e.id >= 0x0a100000 && e.id <= 0x0a100004 && irNames[e.id - 0x0a100000]) e.name = irNames[e.id - 0x0a100000]; });
+  return list;
+}
+function effOf(m) { return effectList(m).find(e => e.id === state.effects[m]); }
+function renderList() {
+  const el = $('plist'); el.innerHTML = ''; const base = showFactory ? 50 : 0, q = $('search').value.trim().toLowerCase();
+  for (let i = base; i < base + 50; i++) {
+    if (q && !(names[i] || '').toLowerCase().includes(q)) continue;
+    const d = document.createElement('div'); d.className = 'pitem' + (i === current ? ' sel' : '');
+    d.innerHTML = `<span class="no">${pname(i)}</span><span></span>`; d.lastChild.textContent = names[i] || '';
+    d.onclick = () => { send([0x11, 0x43, ...u32(i)]); current = i; renderList(); renderHead(); scheduleState(350); };
+    el.appendChild(d);
   }
 }
-$('pvol').oninput = () => { const v = Number($('pvol').value); $('pvolv').textContent = v; throttle('pvol', () => send([0x11, 0x42, 0x01, 0x20, 0x01, 0x00, v & 255])); };
+function renderHead() { $('curNo').textContent = pname(current); $('curName').textContent = names[current] || '—'; }
+function renderMaster() {
+  const box = $('mastervol'); box.innerHTML = '';
+  const raw = globals[0x0202]; const val = raw ? dv(raw).getUint32(0, true) : 100;
+  const k = knob({ label: 'MASTER VOL', min: 0, max: 100, step: 1, value: val, size: 128,
+    onChange: v => throttle('master', () => send([0x11, 0x11, 0x02, 0x02, 0x00, 0x00, ...u32(v)])) });
+  box.appendChild(k);
+}
+function renderChain() {
+  const box = $('chain'); box.innerHTML = '';
+  BLOCKS.forEach((b, i) => {
+    if (i) { const a = document.createElement('span'); a.className = 'arrow'; a.textContent = '›'; box.appendChild(a); }
+    const t = document.createElement('div'); const on = isOn(b.mod);
+    t.className = 'tile ' + (on ? 'on' : 'off') + (selBlock === i ? ' sel' : ''); t.style.color = b.color;
+    const cm = b.mod === AMP && cloneMode();
+    const e = state ? effOf(cm ? CLONE : b.mod) : null;
+    t.innerHTML = `<div class="grip"></div><div class="ic">${ICONS[b.icon]}</div><div class="k" style="color:#fff">${cm ? 'CLONE' : b.key}</div><div class="e"></div><div class="bar"></div>`;
+    t.querySelector('.e').textContent = e ? e.name : '';
+    t.onclick = ev => {
+      if (ev.target.classList.contains('bar')) { toggleModule(b.mod); return; }
+      selBlock = i; renderChain(); renderEditor();
+    };
+    t.ondblclick = () => toggleModule(b.mod);
+    box.appendChild(t);
+  });
+}
+function toggleModule(m, force) {
+  const n = force !== undefined ? force : !isOn(m);
+  state.mask = n ? (state.mask | (1 << m)) : (state.mask & ~(1 << m));
+  send([0x11, 0x49, ...u32(m), ...u32(n ? 1 : 0)]);
+  renderChain(); renderEditor();
+}
+function renderPresetVol() {
+  const box = $('pvolpanel'); box.innerHTML = '';
+  if (!state) return;
+  box.appendChild(knob({ label: 'PRESET VOL', min: 0, max: 100, step: 1, value: state.level ?? 50,
+    onChange: v => { state.level = v; throttle('pvol', () => send([0x11, 0x42, 0x01, 0x20, 0x01, 0x00, v & 255])); } }));
+  $('bpmchip').innerHTML = `♩ <b>${state.bpm ?? '—'}</b> BPM`;
+}
+function renderEditor() {
+  const ed = $('editor'); ed.innerHTML = '';
+  if (!state) return;
+  if (state.nmods !== 9) { ed.innerHTML = `<div class="empty">Formato inatteso: ${state.nmods} moduli (atteso 9).</div>`; return; }
+  const b = BLOCKS[selBlock];
+  const isAmp = b.mod === AMP, cm = isAmp && cloneMode();
+  const m = cm ? CLONE : b.mod;  // module whose effect/params are edited
+  const head = document.createElement('div'); head.className = 'edhead';
+  const title = document.createElement('div'); title.className = 'title'; title.textContent = cm ? 'CLONE' : b.key;
+  const fs = document.createElement('div'); fs.className = 'fxsel'; const sel = document.createElement('select'); fs.appendChild(sel);
+  const list = effectList(m), eid = state.effects[m];
+  if (!list.find(e => e.id === eid)) { const o = document.createElement('option'); o.value = eid; o.textContent = `? 0x${eid.toString(16)}`; sel.appendChild(o); }
+  for (const e of list) { const o = document.createElement('option'); o.value = e.id; o.textContent = e.name; if (e.id === eid) o.selected = true; sel.appendChild(o); }
+  sel.onchange = () => { const id = Number(sel.value); state.effects[m] = id; send([0x11, 0x47, ...u32(m), ...u32(m), ...u32(id)]); scheduleState(400); renderChain(); };
+  const sws = document.createElement('div'); sws.className = 'switches';
+  const onRow = document.createElement('div'); onRow.className = 'swrow'; onRow.append('ON', sw(isOn(b.mod), n => toggleModule(b.mod, n)));
+  sws.appendChild(onRow);
+  head.append(title, fs, sws); ed.appendChild(head);
+
+  const knobs = document.createElement('div'); knobs.className = 'knobs';
+  if (isAmp) {
+    const c = document.createElement('div'); c.className = 'togcell';
+    c.append(sw(cm, n => { toggleModule(CLONE, n); }));
+    const l = document.createElement('div'); l.className = 'lbl'; l.textContent = 'Clone mode'; c.appendChild(l);
+    knobs.appendChild(c);
+  }
+  const eff = effOf(m);
+  if (eff) for (const p of eff.params) {
+    const idx = m * 8 + p.i, cur = state.params[idx];
+    const push = v => { state.params[idx] = v; send([0x11, 0x48, ...u32(m), ...u32(p.i), ...f32(v)]); };
+    if (p.min === 0 && p.max === 1 && p.step === 1) {
+      const c = document.createElement('div'); c.className = 'togcell';
+      c.append(sw(cur >= 0.5, n => push(n ? 1 : 0)));
+      const l = document.createElement('div'); l.className = 'lbl'; l.textContent = p.n; c.appendChild(l);
+      knobs.appendChild(c);
+    } else {
+      const unit = /time/i.test(p.n) ? 'ms' : '';
+      knobs.appendChild(knob({ label: p.n, min: p.min, max: p.max, step: p.step, value: cur, def: p.d,
+        fmt: v => (p.step < 1 ? v.toFixed(1) : String(Math.round(v))) + unit,
+        onChange: (v, final) => final ? push(v) : throttle(`${m}_${p.i}`, () => push(v)) }));
+    }
+  }
+  ed.appendChild(knobs);
+  const d = document.createElement('div'); d.className = 'descbar';
+  d.textContent = cm ? 'Modalità CLONE: il blocco AMP usa un profilo .clo (convertito da .nam) al posto dei modelli di fabbrica.'
+    : 'Trascina le manopole su/giù o usa la rotella (Shift = passi da 10). Doppio clic = valore predefinito. Le modifiche sono live finché non salvi.';
+  ed.appendChild(d);
+}
+function renderAll() { renderChain(); renderPresetVol(); renderEditor(); }
+
+// ---------------------------------------------------------------- top-level UI
 $('tabUser').onclick = () => { showFactory = false; $('tabUser').classList.add('active'); $('tabFactory').classList.remove('active'); renderList(); };
 $('tabFactory').onclick = () => { showFactory = true; $('tabFactory').classList.add('active'); $('tabUser').classList.remove('active'); renderList(); };
+$('search').oninput = renderList;
 $('btnLog').onclick = () => { logEl.style.display = logEl.style.display === 'block' ? 'none' : 'block'; };
 $('btnReload').onclick = fullReload;
 $('btnSave').onclick = () => {
-  const dst = current < 50 ? current : null;
-  const slot = prompt('Salva nello slot USER (1-50):', dst !== null ? dst + 1 : '');
-  if (slot === null) return;
+  const slot = prompt('Salva nello slot USER (1-50):', current < 50 ? current + 1 : ''); if (slot === null) return;
   const n = parseInt(slot, 10); if (!(n >= 1 && n <= 50)) { alert('Slot non valido'); return; }
-  let nm = prompt('Nome (max 10 caratteri ASCII):', names[current] || '');
-  if (nm === null) return; nm = nm.replace(/[^\x20-\x7E]/g, '').slice(0, 10);
+  let nm = prompt('Nome (max 10 caratteri ASCII):', names[current] || ''); if (nm === null) return;
+  nm = nm.replace(/[^\x20-\x7E]/g, '').slice(0, 10);
   if (!confirm(`Sovrascrivere ${pname(n - 1)} "${names[n - 1] || ''}" con "${nm}"?`)) return;
-  const nameBytes = Array.from(nm, c => c.charCodeAt(0)); while (nameBytes.length < 10) nameBytes.push(0);
-  send([0x11, 0x4A, ...u32(n - 1), ...nameBytes, 0, 0, 0]);
-  setTimeout(fullReload, 800);
+  const nb = Array.from(nm, c => c.charCodeAt(0)); while (nb.length < 10) nb.push(0);
+  send([0x11, 0x4A, ...u32(n - 1), ...nb, 0, 0, 0]); toast('Preset salvato'); setTimeout(fullReload, 800);
 };
 $('btnConnect').onclick = async () => {
+  if (inPort) { inPort.onmidimessage = null; inPort = outPort = null; $('led').classList.remove('on'); $('btnConnect').textContent = 'Connect'; $('btnReload').disabled = $('btnSave').disabled = true; return; }
   try {
     midi = await navigator.requestMIDIAccess({ sysex: true });
     const ins = [...midi.inputs.values()], outs = [...midi.outputs.values()];
-    inPort = ins.find(p => /ampcube/i.test(p.name)) || ins[0];
-    outPort = outs.find(p => /ampcube/i.test(p.name)) || outs[0];
-    if (!inPort || !outPort) { setStatus('Nessuna porta MIDI trovata'); return; }
+    inPort = ins.find(p => /ampcube/i.test(p.name)) || ins[0]; outPort = outs.find(p => /ampcube/i.test(p.name)) || outs[0];
+    if (!inPort || !outPort) { toast('Nessuna porta MIDI trovata'); inPort = outPort = null; return; }
     inPort.onmidimessage = onMidi;
-    $('btnReload').disabled = false;
+    $('connName').textContent = inPort.name; $('led').classList.add('on'); $('btnConnect').textContent = 'Disconnect';
+    $('btnReload').disabled = $('btnSave').disabled = false;
     await fullReload();
-  } catch (e) { setStatus('Errore Web MIDI: ' + e.message); }
+  } catch (e) { toast('Errore Web MIDI: ' + e.message); }
 };
+renderMaster(); renderList();
 </script>
 </body>
 </html>
