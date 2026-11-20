@@ -21,21 +21,20 @@ Il formato è documentato in testa a `htfw.py`. In sintesi:
 `htfw.py unpack` seguito da `htfw.py repack` rigenera i file originali identici, sia per
 l'AMPCUBE sia per il Pocket Master.
 
-### Cosa NON è ancora risolto: campo a 0x04
+### Checksum dell'header (risolto con la DLL)
 
-Il valore a 32 bit all'offset 0x04 vale 0x000173E4 (AMPCUBE), 0x0001AC24 (PM) e
-0x00013E44 (CFW). Il CFW lo ha cambiato, quindi dipende dal contenuto. Ipotesi già escluse:
+La funzione `checkCrc` di `5868USB.dll` (Sonicake Manager) calcola il CRC16/MODBUS
+con tabelle hi/lo e init 0xFF/0xFF su `file[6 : dimensione_file]` e lo confronta con la
+word all'offset 0x04, salvata big-endian. Il calcolo torna su tutti e tre i file.
+I byte 6-7 (0x0001) fanno parte dei dati coperti dal CRC.
 
-- CRC16 di qualsiasi polinomio e init sulle sezioni, sull'header (ogni sottointervallo,
-  con il campo azzerato) e sul file intero o il payload (polinomi comuni, 8 init);
-- CRC32 (vari polinomi), Adler32, Fletcher, somme e XOR a 8, 16 e 32 bit;
-- somme o combinazioni dei CRC delle sezioni.
+`isRealFirmware` (funzione a RVA 0xE0860) controlla anche:
 
-**Finché questo campo non è noto, un firmware modificato potrebbe essere rifiutato dal
-bootloader.** Nel caso peggiore il bootloader lo accetta senza controllarlo e il
-dispositivo resta in uno stato non avviabile. Il modo più diretto per risolverlo:
-analizzare con REA (`rea`, analisi .NET/nativa) il Sonicake Manager o la `5868USB.dll`,
-cioè lo strumento che genera e invia questi file.
+- che il magic sia `HTFW`;
+- che il nome del modello all'offset 0x0C sia quello del dispositivo collegato;
+- che la dimensione all'offset 0x08 sia uguale alla dimensione reale del file.
+
+`htfw.py repack` ricalcola tutti questi campi.
 
 ## Architettura
 

@@ -11,7 +11,9 @@ Comandi:
 Formato (ricavato confrontando AMPCUBE 1.2.3, Pocket Master 1.3.3 e CFW 1.0.2):
 
   0x00  4   magic "HTFW"
-  0x04  4   valore a 32 bit SCONOSCIUTO (probabile checksum/ID; sempre 0x0001xxxx)
+  0x04  2   CRC16/MODBUS del file da 0x06 a fine file, salvato big-endian
+            (ricavato da checkCrc in 5868USB.dll di Sonicake Manager)
+  0x06  2   0x0001 (incluso nel CRC dell'header)
   0x08  4   dimensione totale del file .bin
   0x0C  16  nome modello (ASCII, padding 0)
   0x1C  4   versione: 'V', major, minor, patch   (es. 56 01 02 03 = V1.2.3)
@@ -96,7 +98,7 @@ def parse(d):
     if d[:4] != b"HTFW":
         raise ValueError("magic HTFW non trovato")
     h = {
-        "unk04": struct.unpack_from("<I", d, 4)[0],
+        "hdr_crc": struct.unpack_from(">H", d, 4)[0],
         "file_size": struct.unpack_from("<I", d, 8)[0],
         "model": d[0x0C:0x1C].rstrip(b"\0").decode("latin1"),
         "version": "V%d.%d.%d" % tuple(d[0x1D:0x20]),
@@ -123,9 +125,11 @@ def cmd_info(fn, strict=False):
     h, p = parse(d)
     print("modello  : %s  %s" % (h["model"], h["version"]))
     print("file     : %d byte (header dice %d)" % (len(d), h["file_size"]))
-    print("compresso: %s   payload: 0x%x byte   campo 0x04: 0x%08x"
-          % ("LZO1X" if h["compressed"] else "no", h["payload_size"], h["unk04"]))
-    bad = 0
+    hc = crc16_modbus(d[6:h["file_size"]])
+    print("compresso: %s   payload: 0x%x byte"
+          % ("LZO1X" if h["compressed"] else "no", h["payload_size"]))
+    bad = int(hc != h["hdr_crc"]) + int(len(d) != h["file_size"])
+    print("  CRC header %04x %s" % (h["hdr_crc"], "OK" if hc == h["hdr_crc"] else "ERRATO (calc %04x)" % hc))
     for s in h["sections"]:
         c = crc16_modbus(p[s["off"]:s["off"] + s["size"]])
         ok = c == s["crc"]
@@ -166,8 +170,9 @@ def cmd_repack(src, out):
     else:
         body = payload
     struct.pack_into("<I", hdr, 8, HDR + len(body))
-    # NB: il campo a 0x04 viene lasciato invariato (algoritmo sconosciuto).
-    open(out, "wb").write(bytes(hdr) + body)
+    img = bytearray(bytes(hdr) + body)
+    struct.pack_into(">H", img, 4, crc16_modbus(img[6:]))
+    open(out, "wb").write(bytes(img))
     print("scritto", out, HDR + len(body), "byte")
 
 
