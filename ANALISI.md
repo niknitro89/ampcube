@@ -86,3 +86,20 @@ Requisito: `liblzo2` (`apt install liblzo2-2`).
 - **Progetti collegati:** Smart Box CFW e Amphonix 2 CFW (stesso autore),
   github.com/egorcipa8-debug/gp150-htfw, github.com/klotznick/pocket-master-interoperability-guide,
   github.com/Skyggedans/SonicMaster, github.com/MigueLesPaul/sonicake-pocket-master-linux-flash.
+
+## Protocollo editor AMPCUBE (verificato con dump reali, 20/11/2026)
+
+Lo stesso SysEx del Pocket Master: nibble encoding, CRC-8 poly 0x07, frammenti da 19 byte.
+
+- `12 41` stato live / `12 4F` preset salvato: TLV `[sec u16][len u16]{[fid u16][len u16][val]}`.
+  L'AMPCUBE ha **9 moduli** (il Pocket Master 10), con 8 parametri float32 per modulo.
+  Sezione 0002: 3001 = maschera on/off, 3002 = catena, 3003 = ID effetto (`cat<<24 | idx`),
+  3004 = 72 float.
+- Moduli AMPCUBE: 0 PRE (gate/comp/wah/boost), 1 DRV, 2 AMP, 3 CAB, 4 EQ, 5 MOD, 6 DLY,
+  7 RVB, 8 CLONE (cat 0x0F).
+- Scritture: `11 43 u32` seleziona il preset, `11 47 u32 mod u32 mod u32 effetto`,
+  `11 48 u32 mod u32 param f32 valore`, `11 49 u32 mod u32 on`, `11 42 01 20 01 00 vol`,
+  `11 4A u32 slot nome[10] 00 00 00` salva il preset.
+- Il catalogo effetti estratto dal firmware è in `tools/data/ampcube_v123_catalog.json`:
+  tabella in `e`+0x10000 (offset per modulo, poi record di effetti) e cab in `f`.
+- L'editor è `tools/ampcube_editor.html`, generato da `web/build.py`.

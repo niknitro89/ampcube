@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMPCUBE Editor</title>
+<style>
+  :root { --bg:#1b1b1d; --panel:#26262a; --panel2:#2f2f34; --acc:#f08a24; --txt:#e8e8e8; --dim:#9a9aa2; --on:#4cc36a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--txt); }
+  header { display:flex; align-items:center; gap:12px; padding:10px 16px; background:#111; border-bottom:1px solid #333; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0 12px 0 0; letter-spacing:1px; }
+  header .pn { background:var(--acc); color:#111; border-radius:4px; padding:2px 6px; font-weight:700; }
+  button { background:var(--panel2); color:var(--txt); border:1px solid #444; border-radius:5px; padding:7px 12px; cursor:pointer; font-size:13px; }
+  button:hover { border-color:var(--acc); } button.primary { background:var(--acc); color:#111; border-color:var(--acc); font-weight:600; }
+  button:disabled { opacity:.4; cursor:default; }
+  #status { color:var(--dim); font-size:13px; margin-left:auto; }
+  main { display:flex; height:calc(100vh - 54px); }
+  aside { width:250px; min-width:200px; background:var(--panel); border-right:1px solid #333; display:flex; flex-direction:column; }
+  .tabs { display:flex; } .tabs button { flex:1; border-radius:0; border:none; padding:10px; }
+  .tabs button.active { background:var(--panel2); color:var(--acc); font-weight:700; }
+  #plist { overflow:auto; flex:1; }
+  .pitem { padding:7px 10px; border-bottom:1px solid #303034; cursor:pointer; font-size:14px; display:flex; gap:8px; align-items:center; }
+  .pitem:hover { background:#333; } .pitem.sel { background:#4a3420; border-left:3px solid var(--acc); }
+  .pitem .no { font-size:11px; background:#444; border-radius:3px; padding:1px 5px; min-width:34px; text-align:center; }
+  #content { flex:1; overflow:auto; padding:14px; }
+  .toprow { display:flex; gap:16px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:12px; }
+  .mod { background:var(--panel); border:1px solid #38383d; border-radius:8px; padding:10px; }
+  .mod.off { opacity:.55; }
+  .mhead { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .mhead .key { font-weight:800; letter-spacing:1px; width:52px; }
+  .mhead select { flex:1; background:#1e1e21; color:var(--txt); border:1px solid #444; border-radius:4px; padding:4px; }
+  .tog { width:42px; height:22px; border-radius:11px; background:#555; position:relative; cursor:pointer; border:none; padding:0; }
+  .tog::after { content:''; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#ddd; transition:left .15s; }
+  .tog.on { background:var(--on); } .tog.on::after { left:23px; }
+  .prm { display:grid; grid-template-columns:78px 1fr 46px; gap:6px; align-items:center; font-size:12px; margin:3px 0; }
+  .prm input[type=range] { width:100%; accent-color:var(--acc); }
+  .prm .v { text-align:right; color:var(--acc); font-variant-numeric:tabular-nums; }
+  .note { color:var(--dim); font-size:12px; }
+  #log { position:fixed; bottom:0; left:0; right:0; max-height:28vh; overflow:auto; background:#0d0d0e; color:#8f8; font:11px monospace; padding:6px; display:none; border-top:1px solid #333; white-space:pre-wrap; }
+  .warnbox { background:#3a2a10; border:1px solid #7a5a20; padding:8px 10px; border-radius:6px; font-size:13px; margin-bottom:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AMPCUBE EDITOR</h1>
+  <span id="curp"></span>
+  <button id="btnConnect" class="primary">Connetti</button>
+  <button id="btnReload" disabled>Ricarica</button>
+  <button id="btnSave" disabled>Salva preset…</button>
+  <button id="btnLog">Log</button>
+  <span id="status">Non connesso. Usa Chrome o Edge, cavo USB, chiudi l'app Android e Sonicake Manager.</span>
+</header>
+<main>
+  <aside>
+    <div class="tabs"><button id="tabUser" class="active">USER</button><button id="tabFactory">FACTORY</button></div>
+    <div id="plist"></div>
+  </aside>
+  <section id="content">
+    <div class="warnbox">Editor non ufficiale per Sonicake AMPCUBE (firmware V1.2.3), basato sul protocollo SysEx documentato da
+      SonicMaster e dal Pocket Master Interoperability Guide. Le modifiche ai parametri sono <b>live</b> e non vengono memorizzate finché
+      non premi <b>Salva preset</b>. Uso a tuo rischio.</div>
+    <div class="toprow">
+      <label>Volume preset <input id="pvol" type="range" min="0" max="100" step="1" disabled> <span id="pvolv" class="note"></span></label>
+      <span id="bpm" class="note"></span>
+    </div>
+    <div id="mods" class="grid"></div>
+  </section>
+</main>
+<div id="log"></div>
+
+<script>
+const CATALOG = /*CATALOG*/null;
+
+// ---------------------------------------------------------------- protocol
+const hex = a => Array.from(a, b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+const logEl = document.getElementById('log');
+function log(s) { logEl.textContent += s + '\n'; if (logEl.textContent.length > 200000) logEl.textContent = logEl.textContent.slice(-100000); logEl.scrollTop = logEl.scrollHeight; }
+function crc8(bytes) { let c = 0; for (const x of bytes) { c ^= x; for (let i = 0; i < 8; i++) c = (c & 0x80) ? ((c << 1) ^ 7) & 0xff : (c << 1) & 0xff; } return c; }
+function frame(payload) {
+  const body = [0, 1, 0, payload.length, ...payload]; body[0] = crc8(body);
+  const out = [0xF0]; for (const b of body) out.push(b >> 4, b & 15); out.push(0xF7); return out;
+}
+function decodeFrame(raw) {
+  if (raw[0] !== 0xF0 || raw[raw.length - 1] !== 0xF7) return null;
+  const nib = raw.slice(1, -1); if (nib.length % 2 || nib.some(x => x > 15)) return null;
+  const body = []; for (let i = 0; i < nib.length; i += 2) body.push((nib[i] << 4) | nib[i + 1]);
+  if (body.length < 4) return null;
+  const chk = body.slice(); chk[0] = 0;
+  return { ok: crc8(chk) === body[0], cmd: body[1], sub: body[2], payload: body.slice(4, 4 + body[3]) };
+}
+const u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+const f32 = v => Array.from(new Uint8Array(new Float32Array([v]).buffer));
+
+let midi = null, inPort = null, outPort = null;
+let multi = null; const waiters = [];
+const sendQ = []; let sending = false;
+function send(payload) {
+  sendQ.push(payload);
+  if (!sending) pump();
+}
+async function pump() {
+  sending = true;
+  while (sendQ.length) {
+    const p = sendQ.shift();
+    if (!outPort) break;
+    const f = frame(p); log('TX ' + hex(p)); outPort.send(f);
+    await new Promise(r => setTimeout(r, 12));
+  }
+  sending = false;
+}
+function onMidi(e) {
+  const f = decodeFrame(Array.from(e.data));
+  if (!f) return;
+  if (!f.ok) { log('RX CRC ERR'); return; }
+  if (f.cmd <= 1) return deliver(f.payload);
+  if (!multi || multi.count !== f.cmd || f.sub === 0) multi = { count: f.cmd, parts: [] };
+  multi.parts[f.sub] = f.payload;
+  if (multi.parts.filter(Boolean).length === multi.count) { const all = [].concat(...multi.parts); multi = null; deliver(all); }
+}
+function deliver(m) {
+  log('RX ' + (m.length > 40 ? hex(m.slice(0, 40)) + ` … (${m.length} B)` : hex(m)));
+  for (let i = 0; i < waiters.length; i++) {
+    const w = waiters[i];
+    if (m[0] === w.a && m[1] === w.b) { waiters.splice(i, 1); clearTimeout(w.t); w.resolve(m); return; }
+  }
+  unsolicited(m);
+}
+function request(payload, a, b, ms = 4000) {
+  return new Promise((resolve, reject) => {
+    const w = { a, b, resolve }; w.t = setTimeout(() => { const i = waiters.indexOf(w); if (i >= 0) waiters.splice(i, 1); reject(new Error('timeout ' + hex([a, b]))); }, ms);
+    waiters.push(w); send(payload);
+  });
+}
+
+// ---------------------------------------------------------------- device ops
+const dv = arr => new DataView(new Uint8Array(arr).buffer);
+function parseTLV(bytes) {
+  const v = dv(bytes); let i = 0; const out = {};
+  while (i + 4 <= bytes.length) {
+    const sec = v.getUint16(i, true), sl = v.getUint16(i + 2, true); i += 4;
+    const body = bytes.slice(i, i + sl); i += sl;
+    const fields = {}; const bv = dv(body); let j = 0;
+    while (j + 4 <= body.length) { const fid = bv.getUint16(j, true), fl = bv.getUint16(j + 2, true); j += 4; fields[fid] = body.slice(j, j + fl); j += fl; }
+    out[sec] = fields;
+  }
+  return out;
+}
+function parseState(msg) {
+  const t = parseTLV(msg.slice(2));
+  const g = t[2] || {}, lvl = t[1] || {};
+  const st = {};
+  st.nmods = t[0] && t[0][0x1001] ? dv(t[0][0x1001]).getUint32(0, true) : 0;
+  st.level = lvl[0x2001] ? dv(lvl[0x2001]).getUint32(0, true) : null;
+  st.bpm = lvl[0x2002] ? dv(lvl[0x2002]).getUint32(0, true) : null;
+  st.mask = g[0x3001] ? dv(g[0x3001]).getUint32(0, true) : 0;
+  st.chain = g[0x3002] ? Array.from(g[0x3002]) : [];
+  st.effects = []; st.params = [];
+  if (g[0x3003]) { const d = dv(g[0x3003]); for (let k = 0; k < g[0x3003].length / 4; k++) st.effects.push(d.getUint32(k * 4, true)); }
+  if (g[0x3004]) { const d = dv(g[0x3004]); for (let k = 0; k < g[0x3004].length / 4; k++) st.params.push(d.getFloat32(k * 4, true)); }
+  return st;
+}
+let names = [], current = 0, state = null, showFactory = false;
+async function loadNames() {
+  const m = await request([0x12, 0x40], 0x12, 0x40, 8000);
+  names = [];
+  for (let o = 2; o + 20 <= m.length; o += 20) {
+    const idx = dv(m.slice(o, o + 4)).getUint32(0, true);
+    const nm = String.fromCharCode(...m.slice(o + 4, o + 20).filter(c => c)).trim();
+    names[idx] = nm;
+  }
+  renderList();
+}
+async function loadCurrent() {
+  const m = await request([0x12, 0x43], 0x12, 0x43);
+  current = m[2] | (m[3] << 8);
+}
+async function loadState() {
+  const m = await request([0x12, 0x41], 0x12, 0x41, 6000);
+  state = parseState(m);
+  renderState();
+}
+async function fullReload() {
+  try {
+    setStatus('Lettura…');
+    await loadCurrent(); await loadNames(); await loadState();
+    setStatus('Connesso: ' + (inPort && inPort.name));
+  } catch (e) { setStatus('Errore: ' + e.message); }
+}
+let reloadTimer = null;
+function scheduleState(ms = 250) { clearTimeout(reloadTimer); reloadTimer = setTimeout(async () => { try { await loadCurrent(); renderList(); await loadState(); } catch (e) { setStatus('Errore: ' + e.message); } }, ms); }
+function unsolicited(m) {
+  if (m[0] === 0x12 && m[1] === 0x43) { current = m[2] | (m[3] << 8); renderList(); scheduleState(); }
+  else if (m[0] === 0x12 && m[1] === 0x1B) { loadNames().catch(() => {}); }
+}
+
+// ---------------------------------------------------------------- UI
+const $ = id => document.getElementById(id);
+function setStatus(s) { $('status').textContent = s; }
+function pname(i) { return (i < 50 ? 'P' : 'F') + String((i % 50) + 1).padStart(2, '0'); }
+function renderList() {
+  const el = $('plist'); el.innerHTML = '';
+  const base = showFactory ? 50 : 0;
+  for (let i = base; i < base + 50; i++) {
+    const d = document.createElement('div'); d.className = 'pitem' + (i === current ? ' sel' : '');
+    d.innerHTML = `<span class="no">${pname(i)}</span><span></span>`; d.lastChild.textContent = names[i] || '';
+    d.onclick = () => { send([0x11, 0x43, ...u32(i)]); current = i; renderList(); scheduleState(350); };
+    el.appendChild(d);
+  }
+  $('curp').innerHTML = `<span class="pn">${pname(current)}</span> <b></b>`; $('curp').lastChild.textContent = names[current] || '';
+  $('btnSave').disabled = !outPort;
+}
+function fmt(v, step) { return step < 1 ? v.toFixed(1) : Math.round(v).toString(); }
+const throttles = {};
+function throttle(key, fn, ms = 40) {
+  const t = throttles[key] || (throttles[key] = { last: 0, timer: null, fn: null });
+  t.fn = fn; const now = Date.now();
+  if (now - t.last >= ms) { t.last = now; fn(); }
+  else { clearTimeout(t.timer); t.timer = setTimeout(() => { t.last = Date.now(); t.fn(); }, ms - (now - t.last)); }
+}
+function renderState() {
+  const box = $('mods'); box.innerHTML = '';
+  if (!state) return;
+  $('pvol').disabled = false; $('pvol').value = state.level ?? 0; $('pvolv').textContent = state.level;
+  $('bpm').textContent = state.bpm ? `BPM ${state.bpm}` : '';
+  if (state.nmods !== 9) { box.innerHTML = `<p class="note">Formato inatteso: ${state.nmods} moduli (atteso 9).</p>`; return; }
+  for (let m = 0; m < 9; m++) {
+    const cat = CATALOG[m], eid = state.effects[m];
+    const on = !!(state.mask & (1 << m));
+    const card = document.createElement('div'); card.className = 'mod' + (on ? '' : ' off');
+    const head = document.createElement('div'); head.className = 'mhead';
+    const key = document.createElement('span'); key.className = 'key'; key.textContent = cat.key;
+    const tog = document.createElement('button'); tog.className = 'tog' + (on ? ' on' : ''); tog.title = 'On/Off';
+    tog.onclick = () => {
+      const nowOn = !(state.mask & (1 << m));
+      state.mask = nowOn ? (state.mask | (1 << m)) : (state.mask & ~(1 << m));
+      send([0x11, 0x49, ...u32(m), ...u32(nowOn ? 1 : 0)]);
+      tog.classList.toggle('on', nowOn); card.classList.toggle('off', !nowOn);
+    };
+    const sel = document.createElement('select');
+    let eff = cat.effects.find(e => e.id === eid);
+    if (!eff) { const o = document.createElement('option'); o.value = eid; o.textContent = `? 0x${eid.toString(16)}`; sel.appendChild(o); }
+    for (const e of cat.effects) { const o = document.createElement('option'); o.value = e.id; o.textContent = e.name; if (e.id === eid) o.selected = true; sel.appendChild(o); }
+    sel.onchange = () => {
+      const id = Number(sel.value);
+      send([0x11, 0x47, ...u32(m), ...u32(m), ...u32(id)]);
+      scheduleState(400);
+    };
+    head.append(key, sel, tog); card.appendChild(head);
+    if (eff) for (const p of eff.params) {
+      const row = document.createElement('div'); row.className = 'prm';
+      const lab = document.createElement('span'); lab.textContent = p.n;
+      const r = document.createElement('input'); r.type = 'range'; r.min = p.min; r.max = p.max; r.step = p.step;
+      const cur = state.params[m * 8 + p.i]; r.value = cur;
+      const val = document.createElement('span'); val.className = 'v'; val.textContent = fmt(cur, p.step);
+      const push = () => { const v = Number(r.value); state.params[m * 8 + p.i] = v; send([0x11, 0x48, ...u32(m), ...u32(p.i), ...f32(v)]); };
+      r.oninput = () => { val.textContent = fmt(Number(r.value), p.step); throttle(`${m}_${p.i}`, push); };
+      r.onchange = push;
+      row.append(lab, r, val); card.appendChild(row);
+    }
+    box.appendChild(card);
+  }
+}
+$('pvol').oninput = () => { const v = Number($('pvol').value); $('pvolv').textContent = v; throttle('pvol', () => send([0x11, 0x42, 0x01, 0x20, 0x01, 0x00, v & 255])); };
+$('tabUser').onclick = () => { showFactory = false; $('tabUser').classList.add('active'); $('tabFactory').classList.remove('active'); renderList(); };
+$('tabFactory').onclick = () => { showFactory = true; $('tabFactory').classList.add('active'); $('tabUser').classList.remove('active'); renderList(); };
+$('btnLog').onclick = () => { logEl.style.display = logEl.style.display === 'block' ? 'none' : 'block'; };
+$('btnReload').onclick = fullReload;
+$('btnSave').onclick = () => {
+  const dst = current < 50 ? current : null;
+  const slot = prompt('Salva nello slot USER (1-50):', dst !== null ? dst + 1 : '');
+  if (slot === null) return;
+  const n = parseInt(slot, 10); if (!(n >= 1 && n <= 50)) { alert('Slot non valido'); return; }
+  let nm = prompt('Nome (max 10 caratteri ASCII):', names[current] || '');
+  if (nm === null) return; nm = nm.replace(/[^\x20-\x7E]/g, '').slice(0, 10);
+  if (!confirm(`Sovrascrivere ${pname(n - 1)} "${names[n - 1] || ''}" con "${nm}"?`)) return;
+  const nameBytes = Array.from(nm, c => c.charCodeAt(0)); while (nameBytes.length < 10) nameBytes.push(0);
+  send([0x11, 0x4A, ...u32(n - 1), ...nameBytes, 0, 0, 0]);
+  setTimeout(fullReload, 800);
+};
+$('btnConnect').onclick = async () => {
+  try {
+    midi = await navigator.requestMIDIAccess({ sysex: true });
+    const ins = [...midi.inputs.values()], outs = [...midi.outputs.values()];
+    inPort = ins.find(p => /ampcube/i.test(p.name)) || ins[0];
+    outPort = outs.find(p => /ampcube/i.test(p.name)) || outs[0];
+    if (!inPort || !outPort) { setStatus('Nessuna porta MIDI trovata'); return; }
+    inPort.onmidimessage = onMidi;
+    $('btnReload').disabled = false;
+    await fullReload();
+  } catch (e) { setStatus('Errore Web MIDI: ' + e.message); }
+};
+</script>
+</body>
+</html>
