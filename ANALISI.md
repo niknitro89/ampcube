@@ -70,3 +70,19 @@ python3 htfw.py repack ac_unpacked AMPCUBE_mod.bin
 ```
 
 Requisito: `liblzo2` (`apt install liblzo2-2`).
+
+## Informazioni dal sito del CFW (pocketmaster-cfw.guitar-training-generator.com)
+
+- **10 clone (.clo/NAM) e 10 User IR** invece di 5. Al primo avvio del CFW gli slot vengono
+  riformattati con un nuovo layout in flash, e IR e clone presenti vanno persi. Gli slot 6-10 e
+  i nomi da 30 caratteri si gestiscono solo con la web app del CFW (un fork di SonicMaster),
+  non con Sonicake Manager.
+- **Riverberi:** "five extra reverbs" più knob extra e Trails su quelli di serie, con un "DSP più
+  leggero". Gli ID degli algoritmi nuovi vanno da 0xC0 a 0xC4 e sono codice DSP nuovo.
+- **Bootloader:** non è incluso nel file di aggiornamento. Se un aggiornamento fallisce, il
+  Pocket Master si avvia in modalità update tenendo premuti FS1 + FS2 + VOL/VALUE
+  all'accensione. La combinazione per l'AMPCUBE non è nota.
+- **Backup completo:** dump della SPI flash con un programmatore CH341A e una clip SOP-8.
+- **Progetti collegati:** Smart Box CFW e Amphonix 2 CFW (stesso autore),
+  github.com/egorcipa8-debug/gp150-htfw, github.com/klotznick/pocket-master-interoperability-guide,
+  github.com/Skyggedans/SonicMaster, github.com/MigueLesPaul/sonicake-pocket-master-linux-flash.
